@@ -342,6 +342,36 @@ public:
     };
     GPSParms gps[AP_SIM_MAX_GPS_SENSORS];
 
+    // Ice thickness simulation parameters (Sub frame only).
+    // Ice is modelled as: thickness(x,y) = mean + Σ Ai·sin(2π/λi·(x·cosθi + y·sinθi) + φi)
+    // The sub-merged fraction (ice bottom depth below waterline) = thickness * (ρ_ice/ρ_water).
+    // The upward rangefinder returns: vehicle_depth - ice_bottom_depth.
+    class IceParms {
+    public:
+        IceParms(void) {
+            AP_Param::setup_object_defaults(this, var_info);
+        }
+        static const struct AP_Param::GroupInfo var_info[];
+
+        AP_Float mean_m;         // mean ice thickness (m)
+        // wave component 1
+        AP_Float c1_amp_m;       // amplitude (m)
+        AP_Float c1_wl_m;        // wavelength (m)
+        AP_Float c1_dir_deg;     // propagation direction from X axis (deg)
+        AP_Float c1_phase_deg;   // phase offset (deg)
+        // wave component 2
+        AP_Float c2_amp_m;
+        AP_Float c2_wl_m;
+        AP_Float c2_dir_deg;
+        AP_Float c2_phase_deg;
+        // wave component 3
+        AP_Float c3_amp_m;
+        AP_Float c3_wl_m;
+        AP_Float c3_dir_deg;
+        AP_Float c3_phase_deg;
+    };
+    IceParms ice;
+
 #if AP_SIM_VICON_ENABLED
     class ViconParms {
     public:

@@ -19,6 +19,7 @@
 #include "SIM_Submarine.h"
 #include <AP_Motors/AP_Motors.h>
 
+#include <cmath>
 #include <stdio.h>
 
 using namespace SITL;
@@ -67,8 +68,76 @@ Submarine::Submarine(const char *frame_str) :
 
 float Submarine::perpendicular_distance_to_rangefinder_surface() const
 {
-    const float floor_depth = calculate_sea_floor_depth(position);
-    return floor_depth - position.z;
+    return calculate_ice_upward_distance();
+}
+
+/**
+ * @brief Compute ice thickness (m) at the given NED position using the ICE_ SITL parameters.
+ *
+ * Model: thickness(x,y) = mean + Σ Ai·sin(2π/λi · (x·cos θi + y·sin θi) + φi)
+ * Clamped to a minimum of 0.
+ */
+float Submarine::calculate_ice_thickness(float x_m, float y_m) const
+{
+    if (sitl == nullptr) {
+        return 1.0f; // safe fallback
+    }
+    const SIM::IceParms &ice = sitl->ice;
+
+    float thickness = ice.mean_m;
+
+    // Component 1
+    if (!is_zero(ice.c1_amp_m) && is_positive(ice.c1_wl_m)) {
+        const float k1    = M_2PI / ice.c1_wl_m;
+        const float th1   = radians(ice.c1_dir_deg);
+        const float ph1   = radians(ice.c1_phase_deg);
+        thickness += ice.c1_amp_m * sinf(k1 * (x_m * cosf(th1) + y_m * sinf(th1)) + ph1);
+    }
+    // Component 2
+    if (!is_zero(ice.c2_amp_m) && is_positive(ice.c2_wl_m)) {
+        const float k2    = M_2PI / ice.c2_wl_m;
+        const float th2   = radians(ice.c2_dir_deg);
+        const float ph2   = radians(ice.c2_phase_deg);
+        thickness += ice.c2_amp_m * sinf(k2 * (x_m * cosf(th2) + y_m * sinf(th2)) + ph2);
+    }
+    // Component 3
+    if (!is_zero(ice.c3_amp_m) && is_positive(ice.c3_wl_m)) {
+        const float k3    = M_2PI / ice.c3_wl_m;
+        const float th3   = radians(ice.c3_dir_deg);
+        const float ph3   = radians(ice.c3_phase_deg);
+        thickness += ice.c3_amp_m * sinf(k3 * (x_m * cosf(th3) + y_m * sinf(th3)) + ph3);
+    }
+
+    return MAX(thickness, 0.0f);
+}
+
+/**
+ * @brief Compute the upward distance from the vehicle centre to the ice bottom (m).
+ *
+ * Coordinate convention (SITL NED):
+ *   position.z > 0  → vehicle is below the waterline (normal for a sub)
+ *   ice bottom depth below waterline = thickness × (ρ_ice / ρ_water) ≈ 0.894 × thickness
+ *
+ * Returns a positive value when the vehicle is below the ice, zero when touching.
+ * Returns INFINITY when there is no ice (mean_m ≤ 0) or when the vehicle is above ice bottom.
+ */
+float Submarine::calculate_ice_upward_distance() const
+{
+    if (sitl == nullptr || !is_positive(sitl->ice.mean_m)) {
+        return INFINITY;
+    }
+
+    const float thickness  = calculate_ice_thickness((float)position.x, (float)position.y);
+    // Fraction of ice that sits below the waterline (Archimedes)
+    // ρ_ice ≈ 917 kg/m³,  ρ_seawater ≈ 1025 kg/m³
+    static constexpr float ICE_SUBMERGED_FRACTION = 917.0f / 1025.0f;
+    const float ice_bottom_depth = thickness * ICE_SUBMERGED_FRACTION;
+
+    // position.z is positive downward in NED → vehicle_depth = position.z
+    const float vehicle_depth = (float)position.z;
+    const float upward_dist   = vehicle_depth - ice_bottom_depth;
+
+    return MAX(upward_dist, 0.0f);
 }
 
 // calculate rotational and linear accelerations

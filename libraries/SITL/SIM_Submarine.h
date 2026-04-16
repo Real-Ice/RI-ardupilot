@@ -95,6 +95,10 @@ protected:
 
     // calculate sea floor depth based for terrain follow
     float calculate_sea_floor_depth(const Vector3d &/*position*/) const;
+    // calculate ice thickness (m) at the given NED position using sinusoidal wave model
+    float calculate_ice_thickness(float x_m, float y_m) const;
+    // calculate upward distance from vehicle to the bottom of the ice layer (m)
+    float calculate_ice_upward_distance() const;
     // calculate rotational and linear accelerations
     void calculate_forces(const struct sitl_input &input, Vector3f &rot_accel, Vector3f &body_accel);
     // calculate buoyancy

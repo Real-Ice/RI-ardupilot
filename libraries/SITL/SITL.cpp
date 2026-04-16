@@ -655,9 +655,111 @@ const AP_Param::GroupInfo SIM::var_info3[] = {
     AP_SUBGROUPINFO(vicon, "VICON_", 56, SIM, ViconParms),
 #endif  // AP_SIM_VICON_ENABLED
 
+    // @Group{Sub}: ICE_
+    // @Path: ./SITL.cpp
+    AP_SUBGROUPINFO_FRAME(ice, "ICE_", 57, SIM, IceParms, AP_PARAM_FRAME_SUB),
+
 #ifdef SFML_JOYSTICK
     AP_SUBGROUPEXTENSION("",      63, SIM,  var_sfml_joystick),
 #endif // SFML_JOYSTICK
+
+    AP_GROUPEND
+};
+
+// @Group{Sub}: ICE_
+// @Path: ./SITL.cpp
+const AP_Param::GroupInfo SIM::IceParms::var_info[] = {
+    // @Param{Sub}: MEAN
+    // @DisplayName: Ice mean thickness
+    // @Description: Mean ice thickness used by the upward ice-rangefinder simulator
+    // @Range: 0 10
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("MEAN",   1, SIM::IceParms, mean_m,       1.0f),
+
+    // @Param{Sub}: C1AMP
+    // @DisplayName: Ice wave 1 amplitude
+    // @Description: Peak amplitude of ice thickness wave component 1
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C1AMP",  2, SIM::IceParms, c1_amp_m,     0.20f),
+
+    // @Param{Sub}: C1WL
+    // @DisplayName: Ice wave 1 wavelength
+    // @Description: Spatial wavelength of ice thickness wave component 1
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C1WL",   3, SIM::IceParms, c1_wl_m,    200.0f),
+
+    // @Param{Sub}: C1DIR
+    // @DisplayName: Ice wave 1 direction
+    // @Description: Propagation direction of wave component 1 from the X (North) axis
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C1DIR",  4, SIM::IceParms, c1_dir_deg,   0.0f),
+
+    // @Param{Sub}: C1PH
+    // @DisplayName: Ice wave 1 phase
+    // @Description: Phase offset of ice thickness wave component 1
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C1PH",   5, SIM::IceParms, c1_phase_deg, 0.0f),
+
+    // @Param{Sub}: C2AMP
+    // @DisplayName: Ice wave 2 amplitude
+    // @Description: Peak amplitude of ice thickness wave component 2
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C2AMP",  6, SIM::IceParms, c2_amp_m,     0.10f),
+
+    // @Param{Sub}: C2WL
+    // @DisplayName: Ice wave 2 wavelength
+    // @Description: Spatial wavelength of ice thickness wave component 2
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C2WL",   7, SIM::IceParms, c2_wl_m,     80.0f),
+
+    // @Param{Sub}: C2DIR
+    // @DisplayName: Ice wave 2 direction
+    // @Description: Propagation direction of wave component 2 from the X (North) axis
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C2DIR",  8, SIM::IceParms, c2_dir_deg,  90.0f),
+
+    // @Param{Sub}: C2PH
+    // @DisplayName: Ice wave 2 phase
+    // @Description: Phase offset of ice thickness wave component 2
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C2PH",   9, SIM::IceParms, c2_phase_deg, 45.0f),
+
+    // @Param{Sub}: C3AMP
+    // @DisplayName: Ice wave 3 amplitude
+    // @Description: Peak amplitude of ice thickness wave component 3
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C3AMP", 10, SIM::IceParms, c3_amp_m,     0.05f),
+
+    // @Param{Sub}: C3WL
+    // @DisplayName: Ice wave 3 wavelength
+    // @Description: Spatial wavelength of ice thickness wave component 3
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("C3WL",  11, SIM::IceParms, c3_wl_m,     40.0f),
+
+    // @Param{Sub}: C3DIR
+    // @DisplayName: Ice wave 3 direction
+    // @Description: Propagation direction of wave component 3 from the X (North) axis
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C3DIR", 12, SIM::IceParms, c3_dir_deg,  45.0f),
+
+    // @Param{Sub}: C3PH
+    // @DisplayName: Ice wave 3 phase
+    // @Description: Phase offset of ice thickness wave component 3
+    // @Units: deg
+    // @User: Advanced
+    AP_GROUPINFO("C3PH",  13, SIM::IceParms, c3_phase_deg, 120.0f),
 
     AP_GROUPEND
 };
