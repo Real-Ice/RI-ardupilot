@@ -11,33 +11,37 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-Written with reference to the PX4 driver written by Roman Dvorak <dvorakroman@thunderfly.cz>
+#include "AP_TemperatureSensor_SHT4x.h"
 
-*/
-
-#include "AP_TemperatureSensor_SHT3x.h"
-
-#if AP_TEMPERATURE_SENSOR_SHT3X_ENABLED
+#if AP_TEMPERATURE_SENSOR_SHT4X_ENABLED
 #include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
 
-bool AP_TemperatureSensor_SHT3x::send_reset_cmd(void) const
+bool AP_TemperatureSensor_SHT4x::send_reset_cmd(void) const
 {
-    static const uint8_t soft_reset_cmd[2] { 0x30, 0xA2 };  // page 12
+    static const uint8_t soft_reset_cmd[1] { 0x94 };
     return _dev->transfer(soft_reset_cmd, ARRAY_SIZE(soft_reset_cmd), nullptr, 0);
 }
 
-bool AP_TemperatureSensor_SHT3x::read_serial_number(uint8_t sn[6]) const
+bool AP_TemperatureSensor_SHT4x::read_serial_number(uint8_t sn[6]) const
 {
-    static const uint8_t read_sn_cmd[2] { 0x37, 0x80 };
+    static const uint8_t read_sn_cmd[1] { 0x89 };
     return _dev->transfer(read_sn_cmd, ARRAY_SIZE(read_sn_cmd), sn, 6);
 }
 
-void AP_TemperatureSensor_SHT3x::start_next_sample()
+void AP_TemperatureSensor_SHT4x::start_next_sample()
 {
-    static const uint8_t start_measurement_command[2] { 0x2c, 0x06 };
+    // measure T & RH with high repeatability (max 8.3ms conversion time)
+    static const uint8_t start_measurement_command[1] { 0xFD };
     _dev->transfer(start_measurement_command, ARRAY_SIZE(start_measurement_command), nullptr, 0);
 }
 
-#endif // AP_TEMPERATURE_SENSOR_SHT3X_ENABLED
+float AP_TemperatureSensor_SHT4x::convert_humidity(uint16_t raw) const
+{
+    const float rh = -6 + 125 * (raw / 65535.0);
+    return constrain_float(rh, 0.0f, 100.0f);
+}
+
+#endif // AP_TEMPERATURE_SENSOR_SHT4X_ENABLED

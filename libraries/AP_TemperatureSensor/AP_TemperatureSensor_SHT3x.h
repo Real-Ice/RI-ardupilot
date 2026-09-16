@@ -14,7 +14,7 @@
  */
 
 /*
- * I2C driver for Sensiron SHT3x digital temperature sensor
+ * I2C driver for Sensiron SHT3x digital temperature/humidity sensor
 
  https://sensirion.com/media/documents/213E6A3B/63A5A569/Datasheet_SHT3x_DIS.pdf
 
@@ -51,28 +51,20 @@ Download log and check for temperatures
 
 #if AP_TEMPERATURE_SENSOR_SHT3X_ENABLED
 
-#include "AP_TemperatureSensor_Backend.h"
+#include "AP_TemperatureSensor_Sensirion.h"
 
-class AP_TemperatureSensor_SHT3x : public AP_TemperatureSensor_Backend {
+class AP_TemperatureSensor_SHT3x : public AP_TemperatureSensor_Sensirion {
 
-    using AP_TemperatureSensor_Backend::AP_TemperatureSensor_Backend;
+    using AP_TemperatureSensor_Sensirion::AP_TemperatureSensor_Sensirion;
 
-public:
-    __INITFUNC__ void init(void) override;
+protected:
+    const char *name(void) const override { return "SHT3x"; }
 
-    void update() override {};
+    bool send_reset_cmd(void) const override;
+    bool read_serial_number(uint8_t sn[6]) const override;
+    void start_next_sample() override;
 
-private:
-    // reset device
-    bool reset(void) const;
-
-    // prod device to start preparing a measurement:
-    void start_next_sample();
-    // read measurements from device:
-    bool read_measurements(uint16_t &temp, uint16_t &humidity) const;
-
-    // update the temperature, called at 20Hz
-    void _timer(void);
-
+    // RH = 100 * raw/65535
+    float convert_humidity(uint16_t raw) const override { return 100.0 * (raw / 65535.0); }
 };
 #endif // AP_TEMPERATURE_SENSOR_SHT3X_ENABLED

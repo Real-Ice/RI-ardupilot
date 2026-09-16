@@ -61,6 +61,10 @@ public:
     // return temperature from sensor - in degrees Celsius
     bool get_temperature(float &temp, const uint8_t instance = AP_TEMPERATURE_SENSOR_PRIMARY_INSTANCE) const;
 
+    // return relative humidity from sensor - in percent. Only true for
+    // instances whose backend actually supports a humidity reading
+    bool get_humidity(float &humidity, const uint8_t instance = AP_TEMPERATURE_SENSOR_PRIMARY_INSTANCE) const;
+
     bool healthy(const uint8_t instance = AP_TEMPERATURE_SENSOR_PRIMARY_INSTANCE) const;
 
     // accessors to params
@@ -82,8 +86,9 @@ private:
     struct TemperatureSensor_State {
         uint32_t    last_time_ms;              // time when the sensor was last read in milliseconds
         float       temperature;               // temperature (deg C)
+        float       humidity;                  // relative humidity (%), only valid if the backend supports it
         uint8_t     instance;                  // instance number
-        const struct AP_Param::GroupInfo *var_info; 
+        const struct AP_Param::GroupInfo *var_info;
     };
 
     TemperatureSensor_State _state[AP_TEMPERATURE_SENSOR_MAX_INSTANCES];

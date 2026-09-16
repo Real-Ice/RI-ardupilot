@@ -34,6 +34,7 @@
 #include "AP_TemperatureSensor_DroneCAN.h"
 #include "AP_TemperatureSensor_MLX90614.h"
 #include "AP_TemperatureSensor_SHT3x.h"
+#include "AP_TemperatureSensor_SHT4x.h"
 
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
@@ -319,6 +320,11 @@ void AP_TemperatureSensor::init()
                 drivers[instance] = NEW_NOTHROW AP_TemperatureSensor_SHT3x(*this, _state[instance], _params[instance]);
                 break;
 #endif  // AP_TEMPERATURE_SENSOR_SHT3X_ENABLED
+#if AP_TEMPERATURE_SENSOR_SHT4X_ENABLED
+            case AP_TemperatureSensor_Params::Type::SHT4x:
+                drivers[instance] = NEW_NOTHROW AP_TemperatureSensor_SHT4x(*this, _state[instance], _params[instance]);
+                break;
+#endif  // AP_TEMPERATURE_SENSOR_SHT4X_ENABLED
 #if AP_TEMPERATURE_SENSOR_TSYS03_ENABLED
             case AP_TemperatureSensor_Params::Type::TSYS03:
                 drivers[instance] = NEW_NOTHROW AP_TemperatureSensor_TSYS03(*this, _state[instance], _params[instance]);
@@ -405,6 +411,17 @@ bool AP_TemperatureSensor::get_temperature(float &temp, const uint8_t instance) 
     return true;
 }
 
+// returns true if there is a humidity reading
+bool AP_TemperatureSensor::get_humidity(float &humidity, const uint8_t instance) const
+{
+    if (!healthy(instance) || !drivers[instance]->has_humidity()) {
+        return false;
+    }
+
+    humidity = _state[instance].humidity;
+    return true;
+}
+
 bool AP_TemperatureSensor::healthy(const uint8_t instance) const
 {
     return instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->healthy();
@@ -425,6 +442,7 @@ const AP_Param::GroupInfo AP_TemperatureSensor::var_info[] = { AP_GROUPEND };
 void AP_TemperatureSensor::init() { };
 void AP_TemperatureSensor::update() { };
 bool AP_TemperatureSensor::get_temperature(float &temp, const uint8_t instance) const { return false; };
+bool AP_TemperatureSensor::get_humidity(float &humidity, const uint8_t instance) const { return false; };
 bool AP_TemperatureSensor::healthy(const uint8_t instance) const { return false; };
 AP_TemperatureSensor_Params::Type AP_TemperatureSensor::get_type(const uint8_t instance) const { return AP_TemperatureSensor_Params::Type::NONE; };
 AP_TemperatureSensor_Params::Source AP_TemperatureSensor::get_source(const uint8_t instance) const { return AP_TemperatureSensor_Params::Source::None; };

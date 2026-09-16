@@ -38,6 +38,9 @@ public:
     // do we have a valid temperature reading?
     virtual bool healthy(void) const;
 
+    // does this backend also provide a relative humidity reading?
+    virtual bool has_humidity(void) const { return false; }
+
     // logging functions
     void Log_Write_TEMP() const;
 
@@ -47,6 +50,7 @@ public:
 protected:
 
     void set_temperature(const float temperature);
+    void set_humidity(const float humidity);
     void update_external_libraries(const float temperature);
 
     AP_TemperatureSensor                            &_front;    // reference to front-end

@@ -61,12 +61,13 @@ void AP_TemperatureSensor_Backend::Log_Write_TEMP() const
     // @Field: TimeUS: Time since system startup
     // @Field: Instance: temperature sensor instance
     // @Field: Temp: temperature
+    // @Field: Hum: relative humidity, for sensors which support it
     AP::logger().Write("TEMP",
-            "TimeUS,"     "Instance,"       "Temp" , // labels
-            "s"               "#"           "O"    , // units
-            "F"               "-"           "0"    , // multipliers
-            "Q"               "B"           "f"    , // types
-     AP_HAL::micros64(), _state.instance, _state.temperature);
+            "TimeUS,"     "Instance,"       "Temp,"    "Hum" , // labels
+            "s"               "#"           "O"        "%"   , // units
+            "F"               "-"           "0"        "-"   , // multipliers
+            "Q"               "B"           "f"        "f"   , // types
+     AP_HAL::micros64(), _state.instance, _state.temperature, _state.humidity);
 }
 #endif
 
@@ -79,6 +80,12 @@ void AP_TemperatureSensor_Backend::set_temperature(const float temperature)
     }
 
     update_external_libraries(temperature);
+}
+
+void AP_TemperatureSensor_Backend::set_humidity(const float humidity)
+{
+    WITH_SEMAPHORE(_sem);
+    _state.humidity = humidity;
 }
 
 void AP_TemperatureSensor_Backend::update_external_libraries(const float temperature)

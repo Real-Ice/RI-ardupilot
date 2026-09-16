@@ -45,6 +45,26 @@ void AP_Periph_FW::temperature_sensor_update(void)
                              &buffer[0],
                              total_size);
 
+            // Sensors which also provide a humidity reading (e.g. SHT3x/SHT4x)
+            // additionally get broadcast as a Hygrometer message, for
+            // consumers that want temperature+humidity together
+            float humidity;
+            if (temperature_sensor.get_humidity(humidity, index)) {
+                dronecan_sensors_hygrometer_Hygrometer hyg_pkt {};
+                hyg_pkt.temperature = C_TO_KELVIN(temp_deg);
+                hyg_pkt.humidity = humidity;
+                hyg_pkt.id = index;
+
+                uint8_t hyg_buffer[DRONECAN_SENSORS_HYGROMETER_HYGROMETER_MAX_SIZE];
+                const uint16_t hyg_total_size = dronecan_sensors_hygrometer_Hygrometer_encode(&hyg_pkt, hyg_buffer, !canfdout());
+
+                canard_broadcast(DRONECAN_SENSORS_HYGROMETER_HYGROMETER_SIGNATURE,
+                                 DRONECAN_SENSORS_HYGROMETER_HYGROMETER_ID,
+                                 CANARD_TRANSFER_PRIORITY_LOW,
+                                 &hyg_buffer[0],
+                                 hyg_total_size);
+            }
+
             temperature_last_sent_index = index;
             break;
         }
