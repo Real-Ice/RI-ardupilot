@@ -24,3 +24,7 @@ define HAL_WITH_ESC_TELEM 1
 define AP_TEMPERATURE_SENSOR_ENABLED 1
 define AP_TEMPERATURE_SENSOR_MAX_INSTANCES 1
 define AP_PERIPH_DEVICE_TEMPERATURE_ENABLED 1
+
+# TEMPORARY: I2C bus scan printed over TX1/RX1 at boot, for SHT3x/SHT4x
+# hardware bring-up. Remove once the sensor wiring/address is confirmed.
+define AP_PERIPH_I2C_SCAN_DEBUG 1

@@ -82,6 +82,44 @@ const struct LogStructure AP_Periph_FW::log_structure[] = {
 };
 #endif
 
+/*
+  temporary hardware bring-up helper: scan both I2C buses for any
+  responding device and print results over the console (TX1/RX1).
+  Only enabled on boards that opt in via AP_PERIPH_I2C_SCAN_DEBUG in
+  their hwdef, so it doesn't add boot-time cost elsewhere. Remove once
+  the I2C wiring/address is confirmed working.
+ */
+#ifndef AP_PERIPH_I2C_SCAN_DEBUG
+#define AP_PERIPH_I2C_SCAN_DEBUG 0
+#endif
+
+#if AP_PERIPH_I2C_SCAN_DEBUG
+static void i2c_scan_debug()
+{
+    for (uint8_t bus=0; bus<2; bus++) {
+        printf("I2C scan bus %u:\n", bus);
+        uint8_t found = 0;
+        for (uint8_t addr=0x08; addr<=0x77; addr++) {
+            auto *dev = hal.i2c_mgr->get_device_ptr(bus, addr);
+            if (!dev) {
+                continue;
+            }
+            dev->set_retries(2);
+            {
+                WITH_SEMAPHORE(dev->get_semaphore());
+                uint8_t val;
+                if (dev->read_registers(0, &val, 1)) {
+                    printf("  found device at 0x%02x\n", addr);
+                    found++;
+                }
+            }
+            delete dev;
+        }
+        printf("I2C scan bus %u: %u device(s) found\n", bus, found);
+    }
+}
+#endif // AP_PERIPH_I2C_SCAN_DEBUG
+
 void AP_Periph_FW::init()
 {
 #if AP_SIM_ENABLED
@@ -295,6 +333,10 @@ void AP_Periph_FW::init()
     }
 #endif
     
+#if AP_PERIPH_I2C_SCAN_DEBUG
+    i2c_scan_debug();
+#endif
+
 #if AP_TEMPERATURE_SENSOR_ENABLED
     temperature_sensor.init();
 #endif
