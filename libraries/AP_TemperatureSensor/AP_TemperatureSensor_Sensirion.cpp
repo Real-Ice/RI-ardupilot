@@ -29,7 +29,10 @@ extern const AP_HAL::HAL &hal;
 
 void AP_TemperatureSensor_Sensirion::init()
 {
-    _dev = hal.i2c_mgr->get_device_ptr(_params.bus, _params.bus_address);
+    // use I2C standard mode (100kHz): these sensors are polled at a
+    // few Hz at most, and standard mode is far more tolerant of long
+    // wiring/breadboard connections than the 400kHz fast-mode default
+    _dev = hal.i2c_mgr->get_device_ptr(_params.bus, _params.bus_address, 100000, false, 20);
     if (!_dev) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s device is null!", name());
         printf("%s device is null!\n", name());

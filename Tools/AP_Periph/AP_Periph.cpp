@@ -100,7 +100,9 @@ static void i2c_scan_debug()
         printf("I2C scan bus %u:\n", bus);
         uint8_t found = 0;
         for (uint8_t addr=0x08; addr<=0x77; addr++) {
-            auto *dev = hal.i2c_mgr->get_device_ptr(bus, addr);
+            // scan at I2C standard mode (100kHz), same as the Sensirion driver uses,
+            // since a marginal bus can ACK at 100kHz while failing at the 400kHz default
+            auto *dev = hal.i2c_mgr->get_device_ptr(bus, addr, 100000, false, 20);
             if (!dev) {
                 continue;
             }
