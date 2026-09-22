@@ -10,15 +10,15 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `27f611ef6f97d28ea0b6c5f9566b385bd8509b5d`
+- Commit: `35630eb51f73395cc0551eb1683c6948f0137162`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-22
-- git_identity embedded in the .apj: `27f611ef`
+- git_identity embedded in the .apj: `35630eb5`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,211 / 487,424 B.
+Flash used: 168,539 / 487,424 B.
 
 This build also requests the I2C bus at standard mode (100kHz) instead of
 the 400kHz fast-mode default when talking to the SHT3x/SHT4x sensor
@@ -29,7 +29,7 @@ higher clock rather than a wrong bus/address/param. This is a permanent
 change (not debug-only), since these sensors don't need fast-mode
 throughput at a few Hz of polling.
 
-It still includes two temporary hardware bring-up aids, both removable
+It still includes three temporary hardware bring-up aids, all removable
 once the SHT3x/SHT4x sensor is confirmed working:
 
 - Extra `printf()` debug output in the SHT3x/SHT4x driver init sequence
@@ -42,6 +42,11 @@ once the SHT3x/SHT4x sensor is confirmed working:
   board's hwdef (`Tools/AP_Periph/AP_Periph.cpp`), to independently confirm
   what's actually responding on the bus regardless of the SHT3x/SHT4x
   command sequence.
+- A raw GPIO toggle of I2C1_SCL (PA13) and I2C2_SCL (PC4), bypassing the
+  I2C peripheral entirely: each pin is held HIGH (3.3V) for 4s then LOW
+  (0V) for 4s at boot, so it can be checked directly with a multimeter -
+  useful when the bus scan finds nothing at all, to prove whether the MCU
+  can control these physical pins independent of the I2C driver stack.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
