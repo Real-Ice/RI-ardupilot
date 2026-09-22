@@ -10,22 +10,29 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `32144b70c5d83fe9c0ed2ed751a5a97daa788a24`
+- Commit: `418acaf3bb1455b18c42bbd918b2c97bf612613b`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-22
-- git_identity embedded in the .apj: `32144b70`
+- git_identity embedded in the .apj: `418acaf3`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,943 / 487,424 B.
+Flash used: 168,207 / 487,424 B.
 
-This build includes extra `printf()` debug output in the SHT3x/SHT4x driver
-init sequence (`libraries/AP_TemperatureSensor/AP_TemperatureSensor_Sensirion.cpp`),
-visible on `TX1`/`RX1` (USART1, 57600 baud 8N1) at boot, for hardware
-bring-up debugging - since `GCS_SEND_TEXT` on this build routes to a CAN
-debug LogMessage broadcast instead of the console. Once the sensor is
-confirmed working these prints can be removed and the firmware rebuilt.
+This build includes two temporary hardware bring-up aids, both removable
+once the SHT3x/SHT4x sensor is confirmed working:
+
+- Extra `printf()` debug output in the SHT3x/SHT4x driver init sequence
+  (`libraries/AP_TemperatureSensor/AP_TemperatureSensor_Sensirion.cpp`),
+  visible on `TX1`/`RX1` (USART1, 57600 baud 8N1) at boot - since
+  `GCS_SEND_TEXT` on this build routes to a CAN debug LogMessage broadcast
+  instead of the console.
+- A full I2C bus scan (both buses, addresses 0x08-0x77) also printed on
+  `TX1`/`RX1` at boot, gated behind `AP_PERIPH_I2C_SCAN_DEBUG` in this
+  board's hwdef (`Tools/AP_Periph/AP_Periph.cpp`), to independently confirm
+  what's actually responding on the bus regardless of the SHT3x/SHT4x
+  command sequence.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
