@@ -10,17 +10,26 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `418acaf3bb1455b18c42bbd918b2c97bf612613b`
+- Commit: `27f611ef6f97d28ea0b6c5f9566b385bd8509b5d`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-22
-- git_identity embedded in the .apj: `418acaf3`
+- git_identity embedded in the .apj: `27f611ef`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,207 / 487,424 B.
+Flash used: 168,211 / 487,424 B.
 
-This build includes two temporary hardware bring-up aids, both removable
+This build also requests the I2C bus at standard mode (100kHz) instead of
+the 400kHz fast-mode default when talking to the SHT3x/SHT4x sensor
+(`AP_TemperatureSensor_Sensirion.cpp`) - a breadboard-wired SHT45 that
+detected fine on a Raspberry Pi's I2C bus was not ACKing at all at 400kHz
+on this board, which points at wiring/breadboard signal integrity at the
+higher clock rather than a wrong bus/address/param. This is a permanent
+change (not debug-only), since these sensors don't need fast-mode
+throughput at a few Hz of polling.
+
+It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
 
 - Extra `printf()` debug output in the SHT3x/SHT4x driver init sequence
