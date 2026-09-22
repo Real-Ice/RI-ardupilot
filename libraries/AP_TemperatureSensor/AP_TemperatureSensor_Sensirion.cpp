@@ -19,6 +19,7 @@ Written with reference to the PX4 driver written by Roman Dvorak <dvorakroman@th
 #include "AP_TemperatureSensor_Sensirion.h"
 
 #if AP_TEMPERATURE_SENSOR_SHT3X_ENABLED || AP_TEMPERATURE_SENSOR_SHT4X_ENABLED
+#include <stdio.h>
 #include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
 
@@ -31,6 +32,7 @@ void AP_TemperatureSensor_Sensirion::init()
     _dev = hal.i2c_mgr->get_device_ptr(_params.bus, _params.bus_address);
     if (!_dev) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s device is null!", name());
+        printf("%s device is null!\n", name());
         return;
     }
 
@@ -42,13 +44,16 @@ void AP_TemperatureSensor_Sensirion::init()
     uint8_t sn[6];
     if (!read_serial_number(sn)) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s read sn failed", name());
+        printf("%s read sn failed\n", name());
         return;
     }
     GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s: SN%x%x%x%x%x%x", name(), sn[0], sn[1], sn[2], sn[3], sn[4], sn[5]);
+    printf("%s: SN%x%x%x%x%x%x\n", name(), sn[0], sn[1], sn[2], sn[3], sn[4], sn[5]);
 
     // reset
     if (!send_reset_cmd()) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s reset failed", name());
+        printf("%s reset failed\n", name());
         return;
     }
 
@@ -58,6 +63,8 @@ void AP_TemperatureSensor_Sensirion::init()
 
     // lower retries for run
     _dev->set_retries(3);
+
+    printf("%s init OK\n", name());
 
     _dev->register_periodic_callback(sample_interval_us(),
                                      FUNCTOR_BIND_MEMBER(&AP_TemperatureSensor_Sensirion::_timer, void));
