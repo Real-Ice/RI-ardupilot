@@ -28,3 +28,11 @@ define AP_PERIPH_DEVICE_TEMPERATURE_ENABLED 1
 # TEMPORARY: I2C bus scan printed over TX1/RX1 at boot, for SHT3x/SHT4x
 # hardware bring-up. Remove once the sensor wiring/address is confirmed.
 define AP_PERIPH_I2C_SCAN_DEBUG 1
+
+# TEMPORARY: give the I2C1/I2C2 SCL pins a GPIO alias so they can be
+# directly bit-banged for a raw continuity check, bypassing the I2C
+# peripheral entirely. Remove together with AP_PERIPH_I2C_SCAN_DEBUG.
+undef PA13
+undef PC4
+PA13 I2C1_SCL I2C1 GPIO(80)
+PC4  I2C2_SCL I2C2 GPIO(81)
