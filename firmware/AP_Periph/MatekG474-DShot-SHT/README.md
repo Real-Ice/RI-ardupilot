@@ -10,15 +10,22 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `3f397ce1368e1a802080bea6e06a94a13a24ec33`
+- Commit: `32144b70c5d83fe9c0ed2ed751a5a97daa788a24`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-22
-- git_identity embedded in the .apj: `3f397ce1`
+- git_identity embedded in the .apj: `32144b70`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,723 / 487,424 B.
+Flash used: 167,943 / 487,424 B.
+
+This build includes extra `printf()` debug output in the SHT3x/SHT4x driver
+init sequence (`libraries/AP_TemperatureSensor/AP_TemperatureSensor_Sensirion.cpp`),
+visible on `TX1`/`RX1` (USART1, 57600 baud 8N1) at boot, for hardware
+bring-up debugging - since `GCS_SEND_TEXT` on this build routes to a CAN
+debug LogMessage broadcast instead of the console. Once the sensor is
+confirmed working these prints can be removed and the firmware rebuilt.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
