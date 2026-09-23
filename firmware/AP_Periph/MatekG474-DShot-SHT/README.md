@@ -10,24 +10,32 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `35630eb51f73395cc0551eb1683c6948f0137162`
+- Commit: `dea3ac5837a68ea2de27fca17162659bf4cf889d`
 - Branch: `claude/magical-shannon-nnaeuy`
-- Built: 2026-09-22
-- git_identity embedded in the .apj: `35630eb5`
+- Built: 2026-09-23
+- git_identity embedded in the .apj: `dea3ac58`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,539 / 487,424 B.
+Flash used: 168,495 / 487,424 B.
 
-This build also requests the I2C bus at standard mode (100kHz) instead of
-the 400kHz fast-mode default when talking to the SHT3x/SHT4x sensor
-(`AP_TemperatureSensor_Sensirion.cpp`) - a breadboard-wired SHT45 that
-detected fine on a Raspberry Pi's I2C bus was not ACKing at all at 400kHz
-on this board, which points at wiring/breadboard signal integrity at the
-higher clock rather than a wrong bus/address/param. This is a permanent
-change (not debug-only), since these sensors don't need fast-mode
-throughput at a few Hz of polling.
+### Root cause found: wrong I2C TIMINGR register for STM32G4
+
+This build includes a real bug fix in shared HAL code
+(`libraries/AP_HAL_ChibiOS/I2CDevice.cpp`), found during this board's SHT4x
+bring-up. `I2CDevice`'s constructor lets a per-device `bus_clock` request
+(e.g. our driver's 100kHz standard-mode request) override the bus's default
+timing register, but lumped STM32F7/H7/F3/G4/L4/L4PLUS into one branch that
+always wrote the **F7-specific** `HAL_I2C_F7_100_TIMINGR` raw register value,
+regardless of which of those six families it was actually building for - the
+bus manager's default setup a few lines above already picks the correct
+per-family constant, the override path just never matched it. On STM32G4
+(this board) that silently programmed an F7-timed value into the I2C1/I2C2
+peripheral, producing out-of-spec bus timing that no device could ever ACK -
+while the affected pins still toggled fine at the raw GPIO level, which is
+what made this so easy to mistake for a wiring problem. Fixed by giving
+H7/L4/L4PLUS/G4 their own branches, matching the manager's constants.
 
 It still includes three temporary hardware bring-up aids, all removable
 once the SHT3x/SHT4x sensor is confirmed working:
