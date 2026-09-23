@@ -10,15 +10,15 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `44b0a586a6d43c75fcd6820507d4724e3015b6d8`
+- Commit: `07a2fbb44b0c3c87a650f33d625f6f7922dc8609`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-23
-- git_identity embedded in the .apj: `44b0a586`
+- git_identity embedded in the .apj: `07a2fbb4`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,031 / 487,424 B.
+Flash used: 168,051 / 487,424 B.
 
 ### I2C investigation history
 
@@ -42,6 +42,18 @@ Flash used: 168,031 / 487,424 B.
    number" command (`0x89`) instead of a generic "read register 0", since
    SHT4x is command-based, not register-addressable, and could NACK an
    arbitrary command byte even when present and correctly wired.
+5. **Battery monitor and STM32G474 pin/AF mapping independently verified**
+   as not the cause: `AP_PERIPH_BATTERY_ENABLED` is `0` for this board and
+   its only call site is properly guarded, so no I2C battery backend is
+   active; I2C1/I2C2's AF4 assignment on PA13/PA14/PC4/PA8 was cross-checked
+   against ST's own per-chip pin database, not just a generic assumption.
+6. **Oscilloscope confirmed clean 100kHz SCL/SDA at the sensor** - ruling
+   out signal integrity, so this build tests one more hypothesis: the
+   scan's write (command `0x89`) and read (6-byte response) are now two
+   separate I2C transactions with a real 2ms delay between them, instead
+   of one combined transfer with an immediate repeated START, in case the
+   SHT4x needs more turnaround time than the datasheet's timing tables
+   document for the serial-number command specifically.
 
 It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
