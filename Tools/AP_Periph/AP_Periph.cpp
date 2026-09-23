@@ -114,11 +114,22 @@ static void i2c_scan_debug()
                 // even with the sensor present and wired correctly. Use its
                 // actual "read serial number" command (0x89) instead, the
                 // same one AP_TemperatureSensor_SHT4x sends.
+                //
+                // Also split the write and read into two separate I2C
+                // transactions (their own START/STOP each, not a repeated
+                // START) with an explicit delay between them, in case the
+                // sensor needs more turnaround time than an immediate
+                // repeated-START allows for - the real driver's combined
+                // single-transfer version fails identically to this probe,
+                // so this tests whether that timing is the difference.
                 const uint8_t sht4x_read_sn_cmd = 0x89;
-                uint8_t sn[6];
-                if (dev->transfer(&sht4x_read_sn_cmd, 1, sn, sizeof(sn))) {
-                    printf("  found device at 0x%02x\n", addr);
-                    found++;
+                if (dev->transfer(&sht4x_read_sn_cmd, 1, nullptr, 0)) {
+                    hal.scheduler->delay(2);
+                    uint8_t sn[6];
+                    if (dev->transfer(nullptr, 0, sn, sizeof(sn))) {
+                        printf("  found device at 0x%02x\n", addr);
+                        found++;
+                    }
                 }
             }
             delete dev;
