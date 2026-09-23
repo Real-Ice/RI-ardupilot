@@ -10,15 +10,15 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `dea3ac5837a68ea2de27fca17162659bf4cf889d`
+- Commit: `d5fc690a41e2be78777a418b469def1e09a0b409`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-23
-- git_identity embedded in the .apj: `dea3ac58`
+- git_identity embedded in the .apj: `d5fc690a`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,495 / 487,424 B.
+Flash used: 168,211 / 487,424 B.
 
 ### Root cause found: wrong I2C TIMINGR register for STM32G4
 
@@ -37,7 +37,7 @@ while the affected pins still toggled fine at the raw GPIO level, which is
 what made this so easy to mistake for a wiring problem. Fixed by giving
 H7/L4/L4PLUS/G4 their own branches, matching the manager's constants.
 
-It still includes three temporary hardware bring-up aids, all removable
+It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
 
 - Extra `printf()` debug output in the SHT3x/SHT4x driver init sequence
@@ -50,11 +50,13 @@ once the SHT3x/SHT4x sensor is confirmed working:
   board's hwdef (`Tools/AP_Periph/AP_Periph.cpp`), to independently confirm
   what's actually responding on the bus regardless of the SHT3x/SHT4x
   command sequence.
-- A raw GPIO toggle of I2C1_SCL (PA13) and I2C2_SCL (PC4), bypassing the
-  I2C peripheral entirely: each pin is held HIGH (3.3V) for 4s then LOW
-  (0V) for 4s at boot, so it can be checked directly with a multimeter -
-  useful when the bus scan finds nothing at all, to prove whether the MCU
-  can control these physical pins independent of the I2C driver stack.
+
+(A third aid, a raw GPIO toggle of I2C1_SCL/I2C2_SCL bypassing the I2C
+peripheral, was added and then removed again during bring-up: it left the
+SCL pins forced into push-pull GPIO mode and never handed them back to the
+I2C peripheral's alternate-function mode, which hung the very next real
+I2C transaction. It served its purpose - confirming the MCU could drive
+those pins - before the actual root cause below was found.)
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
