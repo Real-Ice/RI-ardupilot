@@ -10,15 +10,15 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `ad2cabc20cef8e741209ce142c27a581beeafdf6`
+- Commit: `580b138ec786fa741d0a2c981a0372b4067872ca`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-23
-- git_identity embedded in the .apj: `ad2cabc2`
+- git_identity embedded in the .apj: `580b138e`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,791 / 487,424 B.
+Flash used: 167,775 / 487,424 B.
 
 ### I2C investigation history
 
@@ -76,6 +76,13 @@ Flash used: 167,791 / 487,424 B.
    `0x0` before the repeated-START read, which would have corrupted every
    periodic post-init measurement for both SHT3x and SHT4x. Changed to
    `send_len=0` for a proper read-only transfer.
+9. **SHT4x detected and reading, but temperature was off on the CAN bus**
+   (showing ~312 instead of a sane value; humidity was fine). Cause:
+   `dronecan.sensors.hygrometer.Hygrometer.temperature` is documented in
+   its DSDL as degrees C, unlike `uavcan.equipment.device.Temperature`
+   which is kelvin - `Tools/AP_Periph/temperature.cpp` was applying the
+   kelvin conversion to both messages. Fixed to send degrees C directly
+   for the Hygrometer message.
 
 It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
