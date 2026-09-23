@@ -76,7 +76,7 @@ void AP_TemperatureSensor_Sensirion::init()
 bool AP_TemperatureSensor_Sensirion::read_measurements(uint16_t &temp, uint16_t &humidity) const
 {
     uint8_t val[6];
-    if (!_dev->transfer(nullptr, 1, val, ARRAY_SIZE(val))) {
+    if (!_dev->transfer(nullptr, 0, val, ARRAY_SIZE(val))) {
         return false;
     }
 

@@ -16,8 +16,11 @@
 #include "AP_TemperatureSensor_SHT4x.h"
 
 #if AP_TEMPERATURE_SENSOR_SHT4X_ENABLED
+#include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
+
+extern const AP_HAL::HAL &hal;
 
 bool AP_TemperatureSensor_SHT4x::send_reset_cmd(void) const
 {
@@ -27,8 +30,16 @@ bool AP_TemperatureSensor_SHT4x::send_reset_cmd(void) const
 
 bool AP_TemperatureSensor_SHT4x::read_serial_number(uint8_t sn[6]) const
 {
+    // unlike a plain register read, the SHT4x needs time to prepare its
+    // reply after the command byte - a combined write+repeated-START-read
+    // transfer NACKs the read address because the sensor isn't ready yet,
+    // so the write and read must be two separate I2C transactions
     static const uint8_t read_sn_cmd[1] { 0x89 };
-    return _dev->transfer(read_sn_cmd, ARRAY_SIZE(read_sn_cmd), sn, 6);
+    if (!_dev->transfer(read_sn_cmd, ARRAY_SIZE(read_sn_cmd), nullptr, 0)) {
+        return false;
+    }
+    hal.scheduler->delay(2);
+    return _dev->transfer(nullptr, 0, sn, 6);
 }
 
 void AP_TemperatureSensor_SHT4x::start_next_sample()
