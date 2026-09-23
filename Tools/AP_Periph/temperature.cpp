@@ -51,7 +51,9 @@ void AP_Periph_FW::temperature_sensor_update(void)
             float humidity;
             if (temperature_sensor.get_humidity(humidity, index)) {
                 dronecan_sensors_hygrometer_Hygrometer hyg_pkt {};
-                hyg_pkt.temperature = C_TO_KELVIN(temp_deg);
+                // unlike uavcan.equipment.device.Temperature, this
+                // message's temperature field is degrees C, not kelvin
+                hyg_pkt.temperature = temp_deg;
                 hyg_pkt.humidity = humidity;
                 hyg_pkt.id = index;
 
