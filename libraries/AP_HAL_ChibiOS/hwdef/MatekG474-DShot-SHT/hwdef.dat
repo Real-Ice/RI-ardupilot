@@ -25,6 +25,22 @@ define AP_TEMPERATURE_SENSOR_ENABLED 1
 define AP_TEMPERATURE_SENSOR_MAX_INSTANCES 1
 define AP_PERIPH_DEVICE_TEMPERATURE_ENABLED 1
 
+# The shared MatekG474 base disables the I2C stuck-bus recovery helper
+# (HAL_I2C_CLEAR_ON_TIMEOUT, on by default in AP_HAL_ChibiOS) with no
+# stated reason, and no shipped MatekG474 firmware has ever actually
+# used I2C to exercise it. Re-enable it here: a device that times out
+# holding SDA low would otherwise never be recovered by the driver.
+undef HAL_I2C_CLEAR_ON_TIMEOUT
+define HAL_I2C_CLEAR_ON_TIMEOUT 1
+
+# Disable DMA for I2C and run it in polling mode instead. STM32G4 has no
+# explicit STM32_I2C_USE_DMA default in this codebase (unlike several H7
+# boards that explicitly disable it after hitting I2C+DMA issues), and no
+# shipped MatekG474 firmware has ever exercised I2C+DMA on this hwdef to
+# prove it works here. Matches the NODMA I2C* pattern used by those boards.
+NODMA I2C*
+define STM32_I2C_USE_DMA FALSE
+
 # TEMPORARY: I2C bus scan printed over TX1/RX1 at boot, for SHT3x/SHT4x
 # hardware bring-up. Remove once the sensor wiring/address is confirmed.
 define AP_PERIPH_I2C_SCAN_DEBUG 1

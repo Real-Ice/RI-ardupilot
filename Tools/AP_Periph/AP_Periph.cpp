@@ -109,8 +109,14 @@ static void i2c_scan_debug()
             dev->set_retries(2);
             {
                 WITH_SEMAPHORE(dev->get_semaphore());
-                uint8_t val;
-                if (dev->read_registers(0, &val, 1)) {
+                // SHT4x is command-based, not register-addressable: a generic
+                // "read register 0" probe risks a NACK on the command byte
+                // even with the sensor present and wired correctly. Use its
+                // actual "read serial number" command (0x89) instead, the
+                // same one AP_TemperatureSensor_SHT4x sends.
+                const uint8_t sht4x_read_sn_cmd = 0x89;
+                uint8_t sn[6];
+                if (dev->transfer(&sht4x_read_sn_cmd, 1, sn, sizeof(sn))) {
                     printf("  found device at 0x%02x\n", addr);
                     found++;
                 }
