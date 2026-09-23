@@ -10,15 +10,15 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `07a2fbb44b0c3c87a650f33d625f6f7922dc8609`
+- Commit: `205ed66bddee9ad44931f943f49a94985d176dc1`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-23
-- git_identity embedded in the .apj: `07a2fbb4`
+- git_identity embedded in the .apj: `205ed66b`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,051 / 487,424 B.
+Flash used: 167,747 / 487,424 B.
 
 ### I2C investigation history
 
@@ -54,6 +54,10 @@ Flash used: 168,051 / 487,424 B.
    of one combined transfer with an immediate repeated START, in case the
    SHT4x needs more turnaround time than the datasheet's timing tables
    document for the serial-number command specifically.
+7. **Scan debug disabled for this build** (`AP_PERIPH_I2C_SCAN_DEBUG` back
+   to `0` in this board's hwdef). The probe code stays in
+   `Tools/AP_Periph/AP_Periph.cpp` and can be re-enabled by flipping that
+   define back to `1` when it's needed again for the next debugging round.
 
 It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
