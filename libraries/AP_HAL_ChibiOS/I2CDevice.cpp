@@ -272,9 +272,29 @@ I2CDevice::I2CDevice(uint8_t busnum, uint8_t address, uint32_t bus_clock, bool u
     asprintf(&pname, "I2C:%u:%02x",
              (unsigned)busnum, (unsigned)address);
     if (bus_clock < bus.busclock) {
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
+#if defined(STM32F7) || defined(STM32F3)
         if (bus_clock <= 100000) {
             bus.i2ccfg.timingr = HAL_I2C_F7_100_TIMINGR;
+            bus.busclock = 100000;
+        }
+#elif defined(STM32H7)
+        if (bus_clock <= 100000) {
+            bus.i2ccfg.timingr = HAL_I2C_H7_100_TIMINGR;
+            bus.busclock = 100000;
+        }
+#elif defined(STM32L4)
+        if (bus_clock <= 100000) {
+            bus.i2ccfg.timingr = HAL_I2C_L4_100_TIMINGR;
+            bus.busclock = 100000;
+        }
+#elif defined(STM32L4PLUS)
+        if (bus_clock <= 100000) {
+            bus.i2ccfg.timingr = HAL_I2C_L4PLUS_100_TIMINGR;
+            bus.busclock = 100000;
+        }
+#elif defined(STM32G4)
+        if (bus_clock <= 100000) {
+            bus.i2ccfg.timingr = HAL_I2C_G4_100_TIMINGR;
             bus.busclock = 100000;
         }
 #else
