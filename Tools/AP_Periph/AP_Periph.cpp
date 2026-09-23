@@ -120,44 +120,6 @@ static void i2c_scan_debug()
         printf("I2C scan bus %u: %u device(s) found\n", bus, found);
     }
 }
-
-/*
-  temporary hardware bring-up helper: bypass the I2C peripheral
-  entirely and directly drive I2C1_SCL and I2C2_SCL as plain GPIO
-  outputs, holding each level for several seconds so it can be
-  checked with a multimeter. This proves whether the MCU can control
-  these physical pins at all, independent of the I2C driver stack,
-  addresses or the sensor.
-
-  This uses ChibiOS's palSetLineMode()/palWriteLine() directly rather
-  than AP_HAL::GPIO::pinMode()/write(): on STM32G4 (and F4/F7/H7/L4)
-  GPIO::pinMode() deliberately *retains* open-drain mode if the pin
-  was already open-drain (as these I2C pins are, via their alternate
-  function config), so a HAL_GPIO_OUTPUT "high" write there would only
-  release the pin - relying on an external pull-up - rather than
-  actually driving it. Forcing PAL_MODE_OUTPUT_PUSHPULL here bypasses
-  that, so this test doesn't depend on the pull-up network at all.
- */
-static void scl_toggle_debug()
-{
-    palSetLineMode(HAL_GPIO_PIN_I2C1_SCL, PAL_MODE_OUTPUT_PUSHPULL);
-    palSetLineMode(HAL_GPIO_PIN_I2C2_SCL, PAL_MODE_OUTPUT_PUSHPULL);
-
-    for (uint8_t i=0; i<2; i++) {
-        const bool level = (i == 0);
-        printf("SCL debug (forced push-pull): I2C1_SCL (PA13) and I2C2_SCL (PC4) -> %s, measure now\n",
-               level ? "HIGH (3.3V)" : "LOW (0V)");
-        palWriteLine(HAL_GPIO_PIN_I2C1_SCL, level);
-        palWriteLine(HAL_GPIO_PIN_I2C2_SCL, level);
-
-        const uint32_t hold_start_ms = AP_HAL::millis();
-        while (AP_HAL::millis() - hold_start_ms < 4000) {
-            stm32_watchdog_pat();
-            hal.scheduler->delay(50);
-        }
-    }
-    printf("SCL debug done\n");
-}
 #endif // AP_PERIPH_I2C_SCAN_DEBUG
 
 void AP_Periph_FW::init()
@@ -374,7 +336,6 @@ void AP_Periph_FW::init()
 #endif
     
 #if AP_PERIPH_I2C_SCAN_DEBUG
-    scl_toggle_debug();
     i2c_scan_debug();
 #endif
 
