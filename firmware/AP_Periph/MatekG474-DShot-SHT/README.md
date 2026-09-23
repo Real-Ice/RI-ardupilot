@@ -10,32 +10,38 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `d5fc690a41e2be78777a418b469def1e09a0b409`
+- Commit: `44b0a586a6d43c75fcd6820507d4724e3015b6d8`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-23
-- git_identity embedded in the .apj: `d5fc690a`
+- git_identity embedded in the .apj: `44b0a586`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 168,211 / 487,424 B.
+Flash used: 168,031 / 487,424 B.
 
-### Root cause found: wrong I2C TIMINGR register for STM32G4
+### I2C investigation history
 
-This build includes a real bug fix in shared HAL code
-(`libraries/AP_HAL_ChibiOS/I2CDevice.cpp`), found during this board's SHT4x
-bring-up. `I2CDevice`'s constructor lets a per-device `bus_clock` request
-(e.g. our driver's 100kHz standard-mode request) override the bus's default
-timing register, but lumped STM32F7/H7/F3/G4/L4/L4PLUS into one branch that
-always wrote the **F7-specific** `HAL_I2C_F7_100_TIMINGR` raw register value,
-regardless of which of those six families it was actually building for - the
-bus manager's default setup a few lines above already picks the correct
-per-family constant, the override path just never matched it. On STM32G4
-(this board) that silently programmed an F7-timed value into the I2C1/I2C2
-peripheral, producing out-of-spec bus timing that no device could ever ACK -
-while the affected pins still toggled fine at the raw GPIO level, which is
-what made this so easy to mistake for a wiring problem. Fixed by giving
-H7/L4/L4PLUS/G4 their own branches, matching the manager's constants.
+1. **`I2CDevice.cpp` TIMINGR family bug (real bug, fixed, but not the actual
+   cause here).** A per-device I2C clock override always wrote the
+   F7-specific raw `TIMINGR` register value regardless of actual MCU family.
+   Genuinely wrong and fixed (H7/L4/L4PLUS/G4 now get their own correct
+   branches), but it turned out this branch was never actually triggered in
+   our case: `HAL_I2C_MAX_CLOCK` (the bus's default before any per-device
+   override) is itself `100000`, so neither the original driver's 400kHz
+   request nor our 100kHz request was ever *below* that default - meaning
+   the correct STM32G4 timing value was in effect the whole time.
+2. **I2C DMA disabled, run in polling mode instead** (`NODMA I2C*` +
+   `STM32_I2C_USE_DMA FALSE`). No shipped MatekG474 firmware has ever
+   exercised I2C+DMA on this hwdef to prove it works, and several other
+   boards (e.g. KakuteH7-Wing) disable I2C DMA after hitting real issues.
+3. **`HAL_I2C_CLEAR_ON_TIMEOUT` re-enabled.** The shared MatekG474 base
+   disables this stuck-bus recovery helper (on by default in
+   AP_HAL_ChibiOS) with no stated reason.
+4. **Debug scan probe fixed** to use the SHT4x's actual "read serial
+   number" command (`0x89`) instead of a generic "read register 0", since
+   SHT4x is command-based, not register-addressable, and could NACK an
+   arbitrary command byte even when present and correctly wired.
 
 It still includes two temporary hardware bring-up aids, both removable
 once the SHT3x/SHT4x sensor is confirmed working:
