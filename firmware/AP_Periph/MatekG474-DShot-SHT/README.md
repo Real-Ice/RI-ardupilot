@@ -10,104 +10,49 @@ can be flashed without a local build environment.
 
 ## Built from
 
-- Commit: `580b138ec786fa741d0a2c981a0372b4067872ca`
+- Commit: `bfff5e870684abec260ce30f0e418b72104bbb02`
 - Branch: `claude/magical-shannon-nnaeuy`
-- Built: 2026-09-23
-- git_identity embedded in the .apj: `580b138e`
+- Built: 2026-09-24
+- git_identity embedded in the .apj: `bfff5e87`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,775 / 487,424 B.
-
-### I2C investigation history
-
-1. **`I2CDevice.cpp` TIMINGR family bug (real bug, fixed, but not the actual
-   cause here).** A per-device I2C clock override always wrote the
-   F7-specific raw `TIMINGR` register value regardless of actual MCU family.
-   Genuinely wrong and fixed (H7/L4/L4PLUS/G4 now get their own correct
-   branches), but it turned out this branch was never actually triggered in
-   our case: `HAL_I2C_MAX_CLOCK` (the bus's default before any per-device
-   override) is itself `100000`, so neither the original driver's 400kHz
-   request nor our 100kHz request was ever *below* that default - meaning
-   the correct STM32G4 timing value was in effect the whole time.
-2. **I2C DMA disabled, run in polling mode instead** (`NODMA I2C*` +
-   `STM32_I2C_USE_DMA FALSE`). No shipped MatekG474 firmware has ever
-   exercised I2C+DMA on this hwdef to prove it works, and several other
-   boards (e.g. KakuteH7-Wing) disable I2C DMA after hitting real issues.
-3. **`HAL_I2C_CLEAR_ON_TIMEOUT` re-enabled.** The shared MatekG474 base
-   disables this stuck-bus recovery helper (on by default in
-   AP_HAL_ChibiOS) with no stated reason.
-4. **Debug scan probe fixed** to use the SHT4x's actual "read serial
-   number" command (`0x89`) instead of a generic "read register 0", since
-   SHT4x is command-based, not register-addressable, and could NACK an
-   arbitrary command byte even when present and correctly wired.
-5. **Battery monitor and STM32G474 pin/AF mapping independently verified**
-   as not the cause: `AP_PERIPH_BATTERY_ENABLED` is `0` for this board and
-   its only call site is properly guarded, so no I2C battery backend is
-   active; I2C1/I2C2's AF4 assignment on PA13/PA14/PC4/PA8 was cross-checked
-   against ST's own per-chip pin database, not just a generic assumption.
-6. **Oscilloscope confirmed clean 100kHz SCL/SDA at the sensor** - ruling
-   out signal integrity, so this build tests one more hypothesis: the
-   scan's write (command `0x89`) and read (6-byte response) are now two
-   separate I2C transactions with a real 2ms delay between them, instead
-   of one combined transfer with an immediate repeated START, in case the
-   SHT4x needs more turnaround time than the datasheet's timing tables
-   document for the serial-number command specifically.
-7. **Scan debug disabled for this build** (`AP_PERIPH_I2C_SCAN_DEBUG` back
-   to `0` in this board's hwdef). The probe code stays in
-   `Tools/AP_Periph/AP_Periph.cpp` and can be re-enabled by flipping that
-   define back to `1` when it's needed again for the next debugging round.
-8. **Root cause found and fixed.** With the scan enabled, the sensor was
-   found at `0x44` on bus 1, but `SHT4x read sn failed` still printed.
-   Oscilloscope capture on the real hardware confirmed: address+write and
-   the `0x89` command byte are ACKed, but the very next bit - the repeated
-   START's read-address byte - is NACKed. The driver's
-   `read_serial_number()` sent the command and read the 6-byte reply as
-   one combined write+repeated-START transfer with no gap; the SHT4x needs
-   time to prepare its reply and isn't ready for an immediate repeated
-   START. Fixed by splitting it into two I2C transactions with a 2ms delay
-   between them, the same pattern the (now-disabled) scan probe used
-   successfully. While in that code, also fixed a second, unrelated bug in
-   the shared `AP_TemperatureSensor_Sensirion::read_measurements()`
-   (inherited unmodified from upstream `AP_TemperatureSensor_SHT3x.cpp`):
-   it passed `send_len=1` with a null send pointer, which is not a
-   read-only transfer - it transmits one garbage byte read from address
-   `0x0` before the repeated-START read, which would have corrupted every
-   periodic post-init measurement for both SHT3x and SHT4x. Changed to
-   `send_len=0` for a proper read-only transfer.
-9. **SHT4x detected and reading, but temperature was off on the CAN bus**
-   (showing ~312 instead of a sane value; humidity was fine). Cause:
-   `dronecan.sensors.hygrometer.Hygrometer.temperature` is documented in
-   its DSDL as degrees C, unlike `uavcan.equipment.device.Temperature`
-   which is kelvin - `Tools/AP_Periph/temperature.cpp` was applying the
-   kelvin conversion to both messages. Fixed to send degrees C directly
-   for the Hygrometer message.
-
-It still includes two temporary hardware bring-up aids, both removable
-once the SHT3x/SHT4x sensor is confirmed working:
-
-- Extra `printf()` debug output in the SHT3x/SHT4x driver init sequence
-  (`libraries/AP_TemperatureSensor/AP_TemperatureSensor_Sensirion.cpp`),
-  visible on `TX1`/`RX1` (USART1, 57600 baud 8N1) at boot - since
-  `GCS_SEND_TEXT` on this build routes to a CAN debug LogMessage broadcast
-  instead of the console.
-- A full I2C bus scan (both buses, addresses 0x08-0x77) also printed on
-  `TX1`/`RX1` at boot, gated behind `AP_PERIPH_I2C_SCAN_DEBUG` in this
-  board's hwdef (`Tools/AP_Periph/AP_Periph.cpp`), to independently confirm
-  what's actually responding on the bus regardless of the SHT3x/SHT4x
-  command sequence.
-
-(A third aid, a raw GPIO toggle of I2C1_SCL/I2C2_SCL bypassing the I2C
-peripheral, was added and then removed again during bring-up: it left the
-SCL pins forced into push-pull GPIO mode and never handed them back to the
-I2C peripheral's alternate-function mode, which hung the very next real
-I2C transaction. It served its purpose - confirming the MCU could drive
-those pins - before the actual root cause below was found.)
+Flash used: 167,551 / 487,424 B.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
 below) rather than trusting the commit hash above once source has moved on.
+
+## Output map
+
+| Pad | Param | Default function | Protocol |
+|---|---|---|---|
+| M1-M4 | `OUT1_FUNCTION`-`OUT4_FUNCTION` | Motor1-4 | DShot600 (`ESC_PWM_TYPE 7`), commanded via DroneCAN GUI Tool's **ESC** panel |
+| M5-M11 | `OUT5_FUNCTION`-`OUT11_FUNCTION` | RCIN1-7 | plain PWM, commanded via the **Servo** panel (`actuator_id` = pad number - 4) |
+
+`ESC_PWM_TYPE` applies to the whole Motor1-4 bank at once (M1-M4 share timer
+TIM2), not per channel - see `SRV_Channel::Function` values in
+`libraries/SRV_Channel/SRV_Channel.h` if reassigning a pad's function.
+
+PWM outputs stay disabled until the node sees `SAFETY_OFF` broadcast from
+the flight controller bridging the CAN bus (`AP_PERIPH_SAFETY_SWITCH_ENABLED`
+is on for this board). Either press the FC's physical safety switch, or set
+`BRD_SAFETY_DEFLT 0` on the FC so it boots with safety already off.
+
+## Temperature/humidity sensor setup
+
+Not enabled by default. Once an SHT3x/SHT4x (e.g. SHT45) is wired to I2C1:
+
+```
+param set TEMP1_TYPE 10    # 8:SHT3x, 10:SHT4x
+param set TEMP1_BUS 0
+param set TEMP1_ADDR 0x44  # 0x44/0x45/0x46 depending on the fitted part
+```
+
+Publishes `uavcan.equipment.device.Temperature` (kelvin) always, plus
+`dronecan.sensors.hygrometer.Hygrometer` (temperature in degrees C, humidity
+in %) when the backend reports humidity, at `TEMP_MSG_RATE` Hz.
 
 ## Flashing over CAN with Mission Planner
 
