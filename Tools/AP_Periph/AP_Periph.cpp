@@ -82,63 +82,6 @@ const struct LogStructure AP_Periph_FW::log_structure[] = {
 };
 #endif
 
-/*
-  temporary hardware bring-up helper: scan both I2C buses for any
-  responding device and print results over the console (TX1/RX1).
-  Only enabled on boards that opt in via AP_PERIPH_I2C_SCAN_DEBUG in
-  their hwdef, so it doesn't add boot-time cost elsewhere. Remove once
-  the I2C wiring/address is confirmed working.
- */
-#ifndef AP_PERIPH_I2C_SCAN_DEBUG
-#define AP_PERIPH_I2C_SCAN_DEBUG 0
-#endif
-
-#if AP_PERIPH_I2C_SCAN_DEBUG
-static void i2c_scan_debug()
-{
-    for (uint8_t bus=0; bus<2; bus++) {
-        printf("I2C scan bus %u:\n", bus);
-        uint8_t found = 0;
-        for (uint8_t addr=0x08; addr<=0x77; addr++) {
-            // scan at I2C standard mode (100kHz), same as the Sensirion driver uses,
-            // since a marginal bus can ACK at 100kHz while failing at the 400kHz default
-            auto *dev = hal.i2c_mgr->get_device_ptr(bus, addr, 100000, false, 20);
-            if (!dev) {
-                continue;
-            }
-            dev->set_retries(2);
-            {
-                WITH_SEMAPHORE(dev->get_semaphore());
-                // SHT4x is command-based, not register-addressable: a generic
-                // "read register 0" probe risks a NACK on the command byte
-                // even with the sensor present and wired correctly. Use its
-                // actual "read serial number" command (0x89) instead, the
-                // same one AP_TemperatureSensor_SHT4x sends.
-                //
-                // Also split the write and read into two separate I2C
-                // transactions (their own START/STOP each, not a repeated
-                // START) with an explicit delay between them, in case the
-                // sensor needs more turnaround time than an immediate
-                // repeated-START allows for - the real driver's combined
-                // single-transfer version fails identically to this probe,
-                // so this tests whether that timing is the difference.
-                const uint8_t sht4x_read_sn_cmd = 0x89;
-                if (dev->transfer(&sht4x_read_sn_cmd, 1, nullptr, 0)) {
-                    hal.scheduler->delay(2);
-                    uint8_t sn[6];
-                    if (dev->transfer(nullptr, 0, sn, sizeof(sn))) {
-                        printf("  found device at 0x%02x\n", addr);
-                        found++;
-                    }
-                }
-            }
-            delete dev;
-        }
-        printf("I2C scan bus %u: %u device(s) found\n", bus, found);
-    }
-}
-#endif // AP_PERIPH_I2C_SCAN_DEBUG
-
 void AP_Periph_FW::init()
 {
 #if AP_SIM_ENABLED
@@ -352,10 +295,6 @@ void AP_Periph_FW::init()
     }
 #endif
     
-#if AP_PERIPH_I2C_SCAN_DEBUG
-    i2c_scan_debug();
-#endif
-
 #if AP_TEMPERATURE_SENSOR_ENABLED
     temperature_sensor.init();
 #endif
