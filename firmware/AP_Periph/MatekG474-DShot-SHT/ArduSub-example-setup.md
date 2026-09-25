@@ -168,3 +168,36 @@ are automatically zeroed by the flight controller when disarmed (or when
 safety is on); `RCINn`/Actuator outputs are only gated by the safety switch,
 not by arm state - so the pump and payloads stay controllable by the
 companion computer even while the vehicle is disarmed.
+
+## Pump failsafe on comms loss
+
+On this node, an `Actuator ArrayCommand` timeout (CAN bus down, companion
+computer stopped sending, etc.) is already handled - `SRV_CMD_TIME_OUT`
+(default `200` ms) zeroes any RCIN-function channel that hasn't heard a
+command in that long. By default that means raw `0` PWM (no pulse), which
+most ESCs treat as "stop" via their own loss-of-signal handling, but that's
+the ESC's behavior to define, not a guaranteed 1500us. For a deterministic
+stop instead, set:
+
+```
+param set OPTIONS 2              # bit 1 (SERVO_FAILSAFE_TO_TRIM); OR into
+                                   # whatever OPTIONS is already set to if
+                                   # other bits are in use on this node
+param set SRV_CMD_TIME_OUT 200   # ms with no command before failing safe; tune as needed
+param set OUT9_TRIM 1500
+param set OUT10_TRIM 1500
+```
+
+Bit 1 of `OPTIONS` (`SERVO_FAILSAFE_TO_TRIM`) makes that same timeout drive
+`OUT9`/`OUT10` to their `TRIM` value instead of `0`. Confirm `OUT9_TRIM`/
+`OUT10_TRIM` are actually `1500` first (see the neutral-point note under
+`ESC_RV` above - nothing here changes trim, it only changes what the
+timeout outputs).
+
+This only affects RCIN/Actuator-function channels (the pump, and Node B's
+payloads if you want the same behavior there - add their bits to Node B's
+own `OPTIONS`). Node A's propulsion (`Motor`-function, `ESC_RV`) already
+fails safe correctly on its own timeout (`ESC_CMD_TIMO`): a timed-out
+`RawCommand` becomes `0`, and for an `ESC_RV`-flagged channel that scales
+through `pwm_from_angle()` to exactly `OUTn_TRIM` - no extra option needed
+there.
