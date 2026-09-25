@@ -14,15 +14,15 @@ flight controller side).
 
 ## Built from
 
-- Commit: `bfff5e870684abec260ce30f0e418b72104bbb02`
+- Commit: `94c4c0c84f8a9a40d2d237da745a05905bfd18de`
 - Branch: `claude/magical-shannon-nnaeuy`
-- Built: 2026-09-24
-- git_identity embedded in the .apj: `bfff5e87`
+- Built: 2026-09-25
+- git_identity embedded in the .apj: `94c4c0c8`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,551 / 487,424 B.
+Flash used: 167,639 / 487,424 B.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
@@ -38,6 +38,12 @@ below) rather than trusting the commit hash above once source has moved on.
 `ESC_PWM_TYPE` applies to the whole Motor1-4 bank at once (M1-M4 share timer
 TIM2), not per channel - see `SRV_Channel::Function` values in
 `libraries/SRV_Channel/SRV_Channel.h` if reassigning a pad's function.
+
+Motor-function channels are forward-only by default (`RawCommand` values are
+clamped to zero or above). Set the corresponding bit in `ESC_RV` (bit 0 =
+Motor1, bit 1 = Motor2, ...) for any channel wired to a reversible/
+bidirectional ESC to get the full signed range instead, centered on the
+channel's trim - reboot required.
 
 PWM outputs stay disabled until the node sees `SAFETY_OFF` broadcast from
 the flight controller bridging the CAN bus (`AP_PERIPH_SAFETY_SWITCH_ENABLED`
