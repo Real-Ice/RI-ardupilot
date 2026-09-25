@@ -10,40 +10,29 @@ companion computer commanding the non-propulsion outputs over MAVLink.
 - All 13 ESCs are **plain PWM, not DShot-capable**.
 - Flight controller frame: ArduSub `Vectored_6DOF` (8 thrusters).
 
-## Read this first: no reverse thrust via AP_Periph's ESC path
+## Reversible ESCs: ESC_RV
 
-**This firmware cannot currently drive a bidirectional/reversible ESC
-through the DroneCAN ESC RawCommand ("Motor") path.**
-`Tools/AP_Periph/rc_out.cpp::rcout_esc()` does:
+`Tools/AP_Periph/rc_out.cpp::rcout_esc()` used to clamp every
+`uavcan.equipment.esc.RawCommand` value to `MAX(0, rc[i])`, discarding
+reverse-thrust commands entirely - `Vectored_6DOF` needs every one of the 8
+propulsion thrusters to run in both directions, so this was a hard blocker
+for this vehicle. Fixed by adding a periph-side bitmask param, **`ESC_RV`**
+(one bit per Motor channel, same bit layout as the flight controller's own
+`CAN_D1_UC_ESC_RV`): channels selected in it are set up with
+`SRV_Channels::set_angle()` instead of `set_range()` and get the full signed
+`RawCommand` value passed through, centered on the channel's trim; anything
+not selected keeps the original forward-only behavior.
 
-```cpp
-// we don't support motor reversal yet on ESCs in AP_Periph
-SRV_Channels::set_output_scaled(SRV_Channels::get_motor_function(i), MAX(0,rc[i]));
+For this vehicle, all 8 propulsion thrusters on Node A are reversible:
+
+```
+param set ESC_RV 255   # bits 0-7 = Motor1-8
 ```
 
-`RawCommand` values are signed (-8192..8191); every negative value - i.e.
-every reverse-thrust command - is clamped to 0 before it reaches the motor
-output. The flight controller's side is fine: `AP_DroneCAN::scale_esc_output()`
-does send a correctly-signed value for a channel configured as a reversible
-ESC. The clamp is entirely on this node's receiving end, and it also matches
-`rcout_init()` calling `SRV_Channels::set_range()` (0..8191, throttle-style)
-rather than `set_angle()` for every Motor-function channel - the whole Motor
-output path is built assuming unidirectional ESCs.
-
-**Impact for this vehicle:** `Vectored_6DOF` needs every one of the 8
-propulsion thrusters to run in both directions to produce arbitrary
-translation + rotation. With this limitation, Node A's propulsion outputs
-are forward-only - the vehicle cannot achieve the maneuverability the frame
-class assumes. This is a firmware gap, not a parameter that can be worked
-around. The pump (M9-M10) and Node B's payload outputs are **not** affected,
-since they go through the separate Actuator ArrayCommand ("RCIN") path,
-which does preserve full range and sign.
-
-If you want this fixed, it needs a periph-side change (e.g. a per-node
-reversible-ESC bitmask param, using `set_angle()` instead of `set_range()`
-for the flagged channels, and passing `rc[i]` through unclamped for them) -
-ask and I can implement it. Everything below documents the parameters as the
-firmware behaves today.
+`ESC_RV` is `@RebootRequired` - it only takes effect at `rcout_init()`. The
+pump (M9-M10) and Node B's payload outputs don't need it: they go through
+the separate Actuator ArrayCommand ("RCIN") path, which already preserves
+full range and sign regardless of this param.
 
 ## Architecture: how one CAN bus serves two nodes
 
@@ -90,6 +79,7 @@ param set ESC_PWM_TYPE 1   # 1:Normal PWM - all 8 thrusters are plain PWM
 param set OUT_BLH_MASK 0   # BLHeli32 passthrough is DShot-only; these ESCs
                             # can't respond to it, so disable it (the board
                             # default of 15 assumed DShot ESCs on M1-M4)
+param set ESC_RV 255       # bits 0-7 = Motor1-8 reversible - see below
 ```
 
 Leaving `OUT_BLH_MASK` at its default wouldn't break anything (a plain-PWM
@@ -163,8 +153,9 @@ computer can drive them directly over MAVLink with **`MAV_CMD_DO_SET_SERVO`**
 bidirectional). This is the right tool for this: ArduPilot's `DO_SET_SERVO`
 handler explicitly only accepts `RCIN1`-`RCIN16` (and a few fixed functions
 like gripper/sprayer) - it outright refuses any channel assigned a `Motor`
-function - so this also could not be used for the propulsion thrusters even
-once reversible-ESC support exists there.
+function, `ESC_RV`/reversible or not - so it isn't an option for the
+propulsion thrusters, which is exactly why they stay on the RawCommand/ESC
+path with `ESC_RV` instead.
 
 `RC_CHANNELS_OVERRIDE` is the alternative if you want continuous/streamed
 control instead of discrete commands - it injects values into the RC input
