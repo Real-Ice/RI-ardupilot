@@ -417,6 +417,14 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @RebootRequired: True
     GSCALAR(esc_pwm_type, "ESC_PWM_TYPE",     0),
 
+    // @Param: ESC_RV
+    // @DisplayName: Reversible ESC output bitmask
+    // @Description: Bitmask of ESC/Motor output channels that use a reversible ESC. RawCommand values from uavcan.equipment.esc.RawCommand are normally clamped to positive (forward) only; channels selected here instead pass the full signed range through to the output, centered on the channel's trim value to match a bidirectional ESC's stop point.
+    // @Bitmask: 0:Motor1,1:Motor2,2:Motor3,3:Motor4,4:Motor5,5:Motor6,6:Motor7,7:Motor8,8:Motor9,9:Motor10,10:Motor11,11:Motor12,12:Motor13,13:Motor14,14:Motor15,15:Motor16,16:Motor17,17:Motor18,18:Motor19,19:Motor20,20:Motor21,21:Motor22,22:Motor23,23:Motor24,24:Motor25,25:Motor26,26:Motor27,27:Motor28,28:Motor29,29:Motor30,30:Motor31,31:Motor32
+    // @User: Advanced
+    // @RebootRequired: True
+    GSCALAR(esc_rv, "ESC_RV",     0),
+
     // @Param: ESC_CMD_TIMO
     // @DisplayName: ESC Command Timeout
     // @Description: This is the duration (ms) with which to hold the last driven ESC command before timing out and zeroing the ESC outputs. To disable zeroing of outputs in event of CAN loss, use 0. Use values greater than the expected duration between two CAN frames to ensure Periph is not starved of ESC Raw Commands.

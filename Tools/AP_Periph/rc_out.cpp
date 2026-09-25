@@ -58,9 +58,15 @@ void AP_Periph_FW::rcout_init()
 
     uint32_t esc_mask = 0;
     for (uint8_t i=0; i<SERVO_OUT_MOTOR_MAX; i++) {
-        SRV_Channels::set_range(SRV_Channels::get_motor_function(i), UAVCAN_ESC_MAX_VALUE);
+        const SRV_Channel::Function function = SRV_Channels::get_motor_function(i);
+        if ((g.esc_rv.get() & (1U<<i)) != 0) {
+            // reversible ESC: full signed range, centered on trim
+            SRV_Channels::set_angle(function, UAVCAN_ESC_MAX_VALUE);
+        } else {
+            SRV_Channels::set_range(function, UAVCAN_ESC_MAX_VALUE);
+        }
         uint8_t chan;
-        if (SRV_Channels::find_channel(SRV_Channels::get_motor_function(i), chan)) {
+        if (SRV_Channels::find_channel(function, chan)) {
             esc_mask |= 1U << chan;
         }
     }
@@ -103,8 +109,11 @@ void AP_Periph_FW::rcout_esc(int16_t *rc, uint8_t num_channels)
 
     const uint8_t channel_count = MIN(num_channels, SERVO_OUT_MOTOR_MAX);
     for (uint8_t i=0; i<channel_count; i++) {
-        // we don't support motor reversal yet on ESCs in AP_Periph
-        SRV_Channels::set_output_scaled(SRV_Channels::get_motor_function(i), MAX(0,rc[i]));
+        // channels flagged in ESC_RV get the full signed RawCommand value
+        // (reversible ESC, set up as an angle function in rcout_init());
+        // everything else keeps the historical forward-only clamp
+        const int16_t scaled_value = ((g.esc_rv.get() & (1U<<i)) != 0) ? rc[i] : MAX(0, rc[i]);
+        SRV_Channels::set_output_scaled(SRV_Channels::get_motor_function(i), scaled_value);
     }
 
     rcout_has_new_data_to_update = true;
