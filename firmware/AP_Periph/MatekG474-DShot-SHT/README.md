@@ -8,6 +8,10 @@ This is not an official ArduPilot release channel build (it won't appear on
 firmware.ardupilot.org) - it's built from this fork and checked in here so it
 can be flashed without a local build environment.
 
+See `ArduSub-example-setup.md` in this folder for a worked multi-node
+ArduSub parameter reference (two of these nodes on one vehicle, plus the
+flight controller side).
+
 ## Built from
 
 - Commit: `bfff5e870684abec260ce30f0e418b72104bbb02`
