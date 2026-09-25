@@ -697,7 +697,7 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Param: OPTIONS
     // @DisplayName: AP Periph Options
     // @Description: Bitmask of AP Periph Options
-    // @Bitmask: 0: Enable continuous sensor probe
+    // @Bitmask: 0: Enable continuous sensor probe, 1: Servo/actuator command timeout fails safe to trim instead of zero PWM
     // @User: Standard
     GSCALAR(options, "OPTIONS", AP_PERIPH_PROBE_CONTINUOUS),
 

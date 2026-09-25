@@ -183,10 +183,21 @@ void AP_Periph_FW::rcout_update()
     const bool has_servo_timed_out = servo_timeout_ms != 0 && ((now_ms - actuator.last_command_ms) >= servo_timeout_ms);
     if (has_servo_timed_out && (actuator.mask != 0)) {
 #if HAL_PWM_COUNT > 0
-        // Output 0 PWM for each channel in the mask
+        // Output 0 PWM for each channel in the mask, or its trim value if
+        // OPTIONS selects failing safe to trim (e.g. a reversible actuator
+        // that should stop at its centered/neutral pulse instead of going
+        // dark, which some ESCs don't treat the same as "stop")
+        const bool failsafe_to_trim = option_is_set(PeriphOptions::SERVO_FAILSAFE_TO_TRIM);
         for (uint8_t i = 0; i < HAL_PWM_COUNT; i++) {
             if (((1U<<i) & actuator.mask) != 0) {
-                SRV_Channels::set_output_pwm_chan(i, 0);
+                uint16_t failsafe_pwm = 0;
+                if (failsafe_to_trim) {
+                    const SRV_Channel *c = SRV_Channels::srv_channel(i);
+                    if (c != nullptr) {
+                        failsafe_pwm = c->get_trim();
+                    }
+                }
+                SRV_Channels::set_output_pwm_chan(i, failsafe_pwm);
             }
         }
 

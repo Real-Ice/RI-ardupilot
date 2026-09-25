@@ -517,6 +517,7 @@ public:
 
     enum class PeriphOptions {
         PROBE_CONTINUOUS = 1U<<0,
+        SERVO_FAILSAFE_TO_TRIM = 1U<<1,
     };
 
     // check if a periph option is set
