@@ -14,15 +14,15 @@ flight controller side).
 
 ## Built from
 
-- Commit: `94c4c0c84f8a9a40d2d237da745a05905bfd18de`
+- Commit: `ab996ba2b3a83f5edf6bd12656a8364ad92c736f`
 - Branch: `claude/magical-shannon-nnaeuy`
 - Built: 2026-09-25
-- git_identity embedded in the .apj: `94c4c0c8`
+- git_identity embedded in the .apj: `ab996ba2`
 - board_id: 1170 (`AP_HW_MatekG474`, shared with the stock `MatekG474-DShot`/
   `MatekG474-Periph`/`MatekG474-GPS` firmwares - any of them can be replaced
   with this one over CAN without a bootloader change)
 
-Flash used: 167,639 / 487,424 B.
+Flash used: 167,744 / 487,424 B.
 
 **If the hwdef, the SHT3x/SHT4x driver, or anything else this firmware
 depends on changes, these files go stale.** Rebuild and replace them (see
@@ -44,6 +44,13 @@ clamped to zero or above). Set the corresponding bit in `ESC_RV` (bit 0 =
 Motor1, bit 1 = Motor2, ...) for any channel wired to a reversible/
 bidirectional ESC to get the full signed range instead, centered on the
 channel's trim - reboot required.
+
+Command timeouts (`ESC_CMD_TIMO` for Motor channels, `SRV_CMD_TIME_OUT` for
+RCIN/actuator channels) fail outputs to `0` PWM by default. For an
+`ESC_RV`-flagged Motor channel that already lands back on its trim value
+(the scaling naturally does that for zero). For an RCIN/actuator channel,
+set `OPTIONS` bit 1 (`SERVO_FAILSAFE_TO_TRIM`) to get the same trim-on-
+timeout behavior there instead of `0` PWM.
 
 PWM outputs stay disabled until the node sees `SAFETY_OFF` broadcast from
 the flight controller bridging the CAN bus (`AP_PERIPH_SAFETY_SWITCH_ENABLED`
