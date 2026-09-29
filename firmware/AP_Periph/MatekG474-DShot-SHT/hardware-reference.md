@@ -163,3 +163,120 @@ Design notes:
   rebuild - not done in this repo yet since this doc is for a from-scratch
   PCB. Ask if you also want the firmware-side hwdef updated to match once
   the board exists.
+
+## Connectors: Pixhawk connector standard (JST-GH)
+
+Pinouts below follow the standard Pixhawk/Dronecode JST-GH connector
+convention (pin 1 = power, last pin = GND, matching e.g.
+`libraries/AP_HAL_ChibiOS/hwdef/ARK_PI6X/README.md`'s connector tables in
+this same repo) rather than anything specific to the real Matek board's
+actual connectors, which aren't identifiable from the product photo. Signal
+voltage is 3.3V throughout (this MCU's native I/O level) unless noted;
+common JST-GH crimp housings for reference: `GHR-04V-S` (4-pin) /
+`GHR-06V-S` (6-pin), mating shrouded headers `SM04B-GHS-TB` /
+`SM06B-GHS-TB`.
+
+### CAN1 / CAN2 - 4-pin JST-GH, two connectors per bus (daisy chain)
+
+Wire **both** connectors on a given bus to the *same* four MCU-side nets in
+parallel (not through any switch/mux) - that's what makes them a pass-through
+daisy chain: a cable in on one connector, a cable continuing to the next
+node out the other.
+
+| Pin | Signal | Voltage |
+|---|---|---|
+| 1 | 5V | 5V |
+| 2 | CAN_H | - |
+| 3 | CAN_L | - |
+| 4 | GND | GND |
+
+CAN1 pair -> PA12 (`CAN1_TX`)/PA11 (`CAN1_RX`) through the CAN1 transceiver;
+CAN2 pair -> PB6 (`CAN2_TX`)/PB5 (`CAN2_RX`) through the CAN2 transceiver.
+Put the 120Ω termination resistor(s) once per bus (ideally switchable, e.g.
+a solder jumper or small switch) between CAN_H/CAN_L, not per connector -
+with two daisy-chain connectors per bus this board might sit in the middle
+of a chain, where termination should usually be *off*, only enabled by
+whichever node is a physical end of the bus.
+
+### I2C (I2C1) - 4-pin JST-GH
+
+| Pin | Signal | Voltage |
+|---|---|---|
+| 1 | 5V | 5V |
+| 2 | SCL | 3.3V |
+| 3 | SDA | 3.3V |
+| 4 | GND | GND |
+
+-> PA13 (`I2C1_SCL`) / PA14 (`I2C1_SDA`). Remember these pins are shared
+with SWDIO/SWCLK on this MCU - this connector and a debug header are
+mutually exclusive unless you break I2C1 out to different pins instead.
+
+### UART1, UART4 - 4-pin JST-GH
+
+Plain UART, no flow control (this hwdef never defines CTS/RTS for either
+port, unlike a Pixhawk-standard 6-pin TELEM connector which carries them) -
+a 4-pin connector is the honest match for what's actually wired, not the
+full 6-pin TELEM pattern:
+
+| Pin | Signal | Voltage |
+|---|---|---|
+| 1 | 5V | 5V |
+| 2 | TX | 3.3V |
+| 3 | RX | 3.3V |
+| 4 | GND | GND |
+
+UART1 -> PA9 (`TX1`)/PA10 (`RX1`). UART4 -> PC10 (`TX4`)/PC11 (`RX4`).
+
+### UART2 + I2C2 - 6-pin JST-GH ("GPS port" style)
+
+Matches the standard combined GPS+compass connector pattern used across
+Pixhawk-standard boards for a module carrying both a UART GPS and an I2C
+compass on one cable:
+
+| Pin | Signal | Voltage |
+|---|---|---|
+| 1 | 5V | 5V |
+| 2 | TX (UART2) | 3.3V |
+| 3 | RX (UART2) | 3.3V |
+| 4 | SCL (I2C2) | 3.3V |
+| 5 | SDA (I2C2) | 3.3V |
+| 6 | GND | GND |
+
+-> PB3 (`TX2`)/PB4 (`RX2`) for UART2, PC4 (`I2C2_SCL`)/PA8 (`I2C2_SDA`)
+for I2C2.
+
+## ESC/servo output header (M1-M11, or M1-M14 with the addition above)
+
+Pixhawk-style JST-GH connectors aren't practical here - eleven (or
+fourteen) individual 3-pin connectors won't fit a 36x36mm board, and this
+isn't the convention real boards with this many outputs use anyway. The
+standard approach for a PWM/ESC output bank instead: a single-row 0.1"
+(2.54mm) pitch pin header, three rows deep, one column per channel:
+
+```
+GND  GND  GND  GND  GND  GND  GND  GND  GND  GND  GND
+5V   5V   5V   5V   5V   5V   5V   5V   5V   5V   5V
+S1   S2   S3   S4   S5   S6   S7   S8   S9   S10  S11
+```
+
+GND and 5V rows are continuous rails (one net each, tied together across
+all columns); only the signal row carries eleven distinct nets, one per
+motor pad from the table above.
+
+Two things worth getting right on the silkscreen, since both are common,
+damaging mistakes when someone plugs in a servo/ESC cable:
+- **Pin order convention**: the JR/Hitec convention (Signal-VCC-GND reading
+  from one edge) and the Futaba convention (swaps VCC/GND) are both in
+  common use and are *not* interchangeable - reversing power and ground
+  into an ESC is a real way to damage it. Pick one, mark it clearly and
+  consistently across every channel, and call it out explicitly in your
+  documentation/silkscreen (e.g. an arrow or dot marking pin 1 = Signal).
+- **This 5V rail only needs to supply the signal circuitry inside each ESC**
+  (most ESCs are separately powered by the main battery lead for the motor
+  itself) - don't size it assuming it needs to deliver motor current, but
+  do size it for however many ESCs' BEC/signal-side draw you expect
+  in parallel on this one shared rail.
+
+Same series-resistor note as the M1-M11 table above applies to whichever
+row carries the signal here - these are still lines leaving the board to
+external cables/ESCs.
