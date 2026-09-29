@@ -10,7 +10,8 @@ can be flashed without a local build environment.
 
 See `ArduSub-example-setup.md` in this folder for a worked multi-node
 ArduSub parameter reference (two of these nodes on one vehicle, plus the
-flight controller side).
+flight controller side), and `hardware-reference.md` for a pin-level
+hardware reference (for replicating or extending the physical board).
 
 ## Built from
 
