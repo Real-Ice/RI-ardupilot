@@ -1,0 +1,61 @@
+# Real Ice CAN Node G474: 14 PWM/ESC outputs + onboard SHT45 temp/humidity
+#
+# Copied (not `include`d) from ../RealIceG474/hwdef.inc - see that file's
+# header for why.
+include ../RealIceG474/hwdef.inc
+
+# --------------------- PWM -----------------------
+# Four rate groups: M1-M4 (TIM5), M5-M8 (TIM3), M9-M12 (TIM2), M13-M14
+# (TIM8). Every pin/channel/AF verified against this MCU's actual
+# alternate-function table (STM32G474xx.py), not assumed from the Matek
+# layout - TIM5 is a new timer group Matek's own hwdef never uses, and
+# M9-M12 on TIM2 are deliberately non-sequential channels (CH1, CH3, CH4,
+# CH2) because that's what's actually wired on this board's PCB.
+PA0  TIM5_CH1 TIM5 PWM(1)  GPIO(50)
+PA1  TIM5_CH2 TIM5 PWM(2)  GPIO(51)
+PA2  TIM5_CH3 TIM5 PWM(3)  GPIO(52)
+PA3  TIM5_CH4 TIM5 PWM(4)  GPIO(53)
+PA6  TIM3_CH1 TIM3 PWM(5)  GPIO(54)
+PA7  TIM3_CH2 TIM3 PWM(6)  GPIO(55)
+PB0  TIM3_CH3 TIM3 PWM(7)  GPIO(56)
+PB1  TIM3_CH4 TIM3 PWM(8)  GPIO(57)
+PA5  TIM2_CH1 TIM2 PWM(9)  GPIO(58)
+PB10 TIM2_CH3 TIM2 PWM(10) GPIO(59)
+PB11 TIM2_CH4 TIM2 PWM(11) GPIO(60)
+PB3  TIM2_CH2 TIM2 PWM(12) GPIO(61)
+PC6  TIM8_CH1 TIM8 PWM(13) GPIO(62)
+PB9  TIM8_CH3 TIM8 PWM(14) GPIO(63)
+
+define AP_PERIPH_RC_OUT_ENABLED 1
+define AP_PERIPH_NOTIFY_ENABLED 1
+
+# enable ESC control
+define HAL_SUPPORT_RCOUT_SERIAL 1
+define HAL_WITH_ESC_TELEM 1
+
+# --------------------- I2C temperature/humidity sensor (onboard SHT45) --
+define AP_TEMPERATURE_SENSOR_ENABLED 1
+define AP_TEMPERATURE_SENSOR_MAX_INSTANCES 1
+define AP_PERIPH_DEVICE_TEMPERATURE_ENABLED 1
+
+# Run I2C in polling mode rather than DMA, same reasoning as
+# MatekG474-DShot-SHT: this MCU also drives PWM/DShot outputs via DMA,
+# the sensor is only polled a few times a second with tiny reads, and
+# I2C+DMA has never been exercised on this MCU family in this tree.
+NODMA I2C*
+define STM32_I2C_USE_DMA FALSE
+
+# --------------------- spare I/O (J8) ------------------------------------
+# PA4 (J8 pin 2) and PB4 (J8 pin 3): both left as plain spare GPIO, no
+# default function. PA4 was meant to be a spare ADC input (and the real
+# silicon's ADC2_IN17 channel probably does exist on this pin per the
+# datasheet), but this build confirmed ArduPilot's STM32G474 support in
+# this tree has no ADC2 channel map at all (only ADC1_map exists in
+# STM32G474xx.py), and none of the pins ADC1_map does cover (PA0-3, PB0,
+# PB1, PB11, PB12, PC0-3, PF0) are free on this board - they're all
+# already PWM outputs or unconnected per the schematic. Using PA4 as
+# ADC2 fails waf configure outright (AttributeError: module
+# 'STM32G474xx' has no attribute 'ADC2_map') - this isn't a judgment
+# call, the build itself proved it unsupported. Adding an ADC2_map to
+# that script is a real option if analog input on this pin matters
+# enough to extend the MCU support for it - ask if you want that done.

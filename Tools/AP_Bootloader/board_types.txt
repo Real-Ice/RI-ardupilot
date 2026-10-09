@@ -584,6 +584,12 @@ AP_HW_Accton_Godwit_GA1        7120
 
 # please fill gaps in the above ranges rather than adding past ID #7199
 
+# PROVISIONAL - not an officially reserved ID. Picked locally (in this
+# fork, on the realice-g474-board branch) so RealIceG474 builds and
+# flashes for development. Replace with a real ID obtained via a PR to
+# this file (max 10 IDs per request, filling a gap in the ranges above)
+# before this board ships or goes near a shared/production fleet.
+AP_HW_RealIceG474                    7999
 
 # OpenDroneID enabled boards. Use 10000 + the base board ID
 AP_HW_CubeOrange_ODID               10140

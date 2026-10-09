@@ -1,0 +1,47 @@
+# Real Ice CAN Node G474 - 14 outputs, consolidating the 8 propulsion +
+# 2 pump + 3 payload layout documented in
+# firmware/AP_Periph/MatekG474-DShot-SHT/ArduSub-example-setup.md onto
+# one board instead of two. M14 is spare.
+
+# M1-M8: propulsion thrusters (Vectored_6DOF), plain PWM, reversible
+OUT1_FUNCTION 33
+OUT2_FUNCTION 34
+OUT3_FUNCTION 35
+OUT4_FUNCTION 36
+OUT5_FUNCTION 37
+OUT6_FUNCTION 38
+OUT7_FUNCTION 39
+OUT8_FUNCTION 40
+
+# M9-M10: pump (RCIN1-2) | M11-M13: payload (RCIN3-5) | M14: spare (RCIN6)
+OUT9_FUNCTION 51
+OUT10_FUNCTION 52
+OUT11_FUNCTION 53
+OUT12_FUNCTION 54
+OUT13_FUNCTION 55
+OUT14_FUNCTION 56
+
+# All outputs are plain PWM (not DShot-capable ESCs on this vehicle)
+ESC_PWM_TYPE 1
+OUT_BLH_MASK 0
+
+# M1-M8 are reversible ESCs - see ESC_RV in Tools/AP_Periph/Parameters.cpp
+ESC_RV 255
+
+# RX3/USART3 is gone on this board, and UART1 is the console - no free
+# port for ESC telemetry, and these are plain PWM ESCs that typically
+# don't report telemetry anyway.
+ESC_TELEM_PORT -1
+
+# Fail the pump/payload RCIN outputs safe to their trim value (not 0 PWM)
+# on CAN/companion-computer comms loss - see
+# Tools/AP_Periph/rc_out.cpp::rcout_update() and the "Pump failsafe on
+# comms loss" section of ArduSub-example-setup.md.
+OPTIONS 2
+
+# Onboard SHT45 on I2C2 at 0x44, published over DroneCAN
+TEMP1_TYPE 10
+TEMP1_BUS 1
+TEMP1_ADDR 68
+TEMP1_SRC 6
+TEMP_MSG_RATE 2
