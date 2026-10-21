@@ -103,13 +103,21 @@ flash) - this only replaces the application, not the bootloader.
 ## First flash (bootloader + app)
 
 This is a new board - unlike Matek, there's no prior stock firmware
-already on it to CAN-update from. Flash `AP_Periph_with_bl.hex`
-(bootloader + application combined) over SWD with an ST-Link and
-STM32CubeProgrammer (or similar), connecting under reset. After that,
-subsequent application updates can go over CAN as above.
+already on it to CAN-update from, so `AP_Periph.apj`/`.bin` (application
+only, assumes a bootloader is already present) aren't enough by
+themselves for a blank chip.
+
+Use **`AP_Periph_with_bl.hex`** in this folder instead - bootloader and
+application combined in one Intel HEX file, with the flash start address
+(`0x08000000`) embedded in the file itself. In STM32CubeProgrammer:
+connect under reset, open this `.hex` file, and program it - no need to
+set a start address manually (that's the point of `.hex` over a raw
+`.bin`: the address is self-describing). After this first flash,
+subsequent application-only updates can go over CAN using
+`AP_Periph.apj` as described above.
 
 `Tools/bootloaders/RealIceG474-DShot-SHT_bl.bin`/`.hex` (the bootloader
-alone) are also checked in, built via
+alone, no application) are also checked in, built via
 `Tools/scripts/build_bootloaders.py RealIceG474-DShot-SHT`.
 
 ## Rebuilding
@@ -122,6 +130,7 @@ submodules available:
 ./waf AP_Periph
 cp build/RealIceG474-DShot-SHT/bin/AP_Periph.apj firmware/AP_Periph/RealIceG474-DShot-SHT/
 cp build/RealIceG474-DShot-SHT/bin/AP_Periph.bin firmware/AP_Periph/RealIceG474-DShot-SHT/
+cp build/RealIceG474-DShot-SHT/bin/AP_Periph_with_bl.hex firmware/AP_Periph/RealIceG474-DShot-SHT/
 ```
 
 To rebuild the bootloader (only needed if the bootloader-side hwdef
